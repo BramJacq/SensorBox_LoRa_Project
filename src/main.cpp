@@ -22,7 +22,7 @@ GasSensor(A0)           -->    GPIO33
 #include <SPI.h>
 #include <LoRa.h>
 #include "DHT.h" //for temp sensor
-#include "MQ2.h" //for Gas sensor
+
 
 // --- Pin definitions for ESP32 DevKit (AZ Delivery) ---
 #define SCK     18  // SPI Clock
@@ -47,7 +47,10 @@ unsigned int sample;
 uint16_t rawMin = 4095, rawMax = 0;
 
 //For Gas Sensor
-MQ2 mq2(33); // Use GPIO33
+#define MQ2_PIN 33   // Analog input pin (after voltage divider)
+const float GAS_VOLTAGE_MAX = 3.3;  // ESP32 ADC specs
+const int GAS_ADC_RES = 4095;
+float GAS_smoothValue = 0;    // Smoothing filter (better readings)
 
 // --- LoRa frequency (set to match your region) ---
 #define LORA_FREQ 868E6   // use 868E6 for EU, 433E6 for Asia
@@ -71,7 +74,6 @@ void setup() { //For LoRa communication!
   Serial.println("LoRa init succeeded!");
 
   dht.begin(); //Tempsensor
-  mq2.calibrate(); //Gassensor
   
 //FOR LIGHTSENSOR  
   analogSetWidth(12);
@@ -131,23 +133,30 @@ void loop() {
   if (pct > 100.0f) pct = 100.0f;
   if (pct < 0.0f)   pct = 0.0f;
 
+
+//Code for GAS sensor:
+/////////////////////////////////////////////////////////////////////////////////////////////
+int GAS_raw = analogRead(MQ2_PIN);    // Read raw ADC
+GAS_smoothValue = (GAS_smoothValue * 0.8) + (GAS_raw * 0.2);      // Simple low-pass filter (smooths noise)
+float GAS_percent = (GAS_smoothValue / GAS_ADC_RES) * 100.0;    // Convert to percentage 0–100%
+
+  if (GAS_percent > 100.0) GAS_percent = 100.0;   // Safety clamp
+  if (GAS_percent < 0.0)   GAS_percent = 0.0;
+
 //Code for all sensors / LoRa communication:
 /////////////////////////////////////////////////////////////////////////////////////////////
   Serial.printf("Sending packet: Temperature: %.2f °C, Humidity: %.2f %%\n",temp,hum);
   Serial.printf("Sending packet: Geluidsniveau: %.2f dB\n",dB);
   Serial.printf("Sending packet: Light Value: %.2f\n",pct); 
-  Serial.printf("Sending packet: LPG: %d\n",mq2.getLPG());
-  Serial.printf("Sending packet: CO: %d\n",mq2.getCO());
-  Serial.printf("Sending packet: Smoke: %d\n",mq2.getSmoke());
+  Serial.printf("Sending packet: Gas Intensity: %.2f %%\n",GAS_percent);
+
 
   LoRa.beginPacket();
   LoRa.printf("    \n");
   LoRa.printf("    Temperature: %.2f °C, Humidity: %.2f %%\n",temp,hum);
   LoRa.printf("    Geluidsniveau: %.2f dB\n",dB);
   LoRa.printf("    Light Value: %.2f\n",pct); 
-  LoRa.printf("    LPG: %d\n",mq2.getLPG());
-  LoRa.printf("    CO: %d\n",mq2.getCO());
-  LoRa.printf("    Smoke: %d\n",mq2.getSmoke());
+  LoRa.printf("    Gas Intensity: %.2f %%\n",GAS_percent);
   LoRa.endPacket();
 
   delay(1000); // Send every second
