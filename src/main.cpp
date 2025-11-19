@@ -145,7 +145,8 @@ float GAS_percent = (GAS_smoothValue / GAS_ADC_RES) * 100.0;    // Convert to pe
 
 //Code for all sensors / LoRa communication:
 /////////////////////////////////////////////////////////////////////////////////////////////
-  Serial.printf("Sending packet: Temperature: %.2f °C, Humidity: %.2f %%\n",temp,hum);
+  Serial.printf("Sending packet: Temperature: %.2f °C\n",temp);
+  Serial.printf("Sending packet: Humidity: %.2f %%\n",hum);
   Serial.printf("Sending packet: Geluidsniveau: %.2f dB\n",dB);
   Serial.printf("Sending packet: Light Value: %.2f\n",pct); 
   Serial.printf("Sending packet: Gas Intensity: %.2f %%\n",GAS_percent);
@@ -153,7 +154,8 @@ float GAS_percent = (GAS_smoothValue / GAS_ADC_RES) * 100.0;    // Convert to pe
 
   LoRa.beginPacket();
   LoRa.printf("    \n");
-  LoRa.printf("    Temperature: %.2f °C, Humidity: %.2f %%\n",temp,hum);
+  LoRa.printf("    Temperature: %.2f °C\n",temp);
+  LoRa.printf("    Humidity: %.2f %%\n",hum);
   LoRa.printf("    Geluidsniveau: %.2f dB\n",dB);
   LoRa.printf("    Light Value: %.2f\n",pct); 
   LoRa.printf("    Gas Intensity: %.2f %%\n",GAS_percent);
